@@ -8,71 +8,52 @@ const port = process.env.PORT || 3000;
 
 app.use(express.json());
 
+const dataError = 'Unable to retrieve data'
+
 // users
 
-app.get('/users', (req, res)=>{
-    User.find({})
-        .then((value)=>{return res.send(
-            {
-                msg: 'Success!',
-                value
-            }
-        )})
-        .catch((error)=>{
-            res.status(500).send({msg: 'Unable to retrieve data'});
-        })
+app.get('/users', async (req, res)=>{
+    try{
+        const data = await User.find({})
+        return res.send({msg:'Success', data})
+    }
+    catch(e){
+        return res.status(500).send({msg:dataError, e})
+    }
 })
 
-app.get('/users/id/:id', (req, res)=>{
+app.get('/users/id/:id', async (req, res)=>{
     const _id = req.params.id;
 
-    User.findById(_id)
-        .then((value)=>{
-            if(!value){
-                return res.status(404).send('Data not found')
-            }
-            return res.send({msg: 'Success', value})
-        })
-        .catch((error)=>{
-            res.status(500).send({msg: 'Error', error});
-        })
+    try{
+        const data = await User.findById({_id});
+        return res.send({msg:'Success', data});
+    }
+    catch(e){
+        return res.status(500).send({msg:dataError, e});
+    }
 })
 
 app.get('/users/name/:name', (req,res)=>{
-    const name = req.params.name
+    const name = req.params.name;
 
-    User.findOne({name})
+    User.find({name})
         .then((value)=>{
-            if(!value){
-                return res.status(404).send({msg: 'Not found'})
+            if(value.length === 0){
+                return res.status(404).send({msg:'Not found'})
             }
-            return res.send({msg: 'Success', value});
+            return res.send({msg:'Success', value})
         })
-        .catch((error)=>{
-            res.status(400).send(
-            {
-                msg: 'Unable to retrieve data',
-                error
-            }
-        )})
+        .catch((e)=>{return res.status(500).send({msg:dataError, e})})
 })
 
 app.post('/users',(req, res)=>{
-    const data = new User(req.body)
+    const data = new User(req.body);
 
     data.save()
-        .then((data)=>{return res.send(
-            {
-                msg: 'Success',
-                data
-            }
-        )})
+        .then((data)=>{return res.send({msg: 'Success',data})})
         .catch((error)=>{
-            res.status(400).send(
-            {
-                msg: 'Unable to create user',
-                error
-            }
+            return res.status(400).send({msg: 'Unable to create user',error}
         )})
 })
 
@@ -80,36 +61,27 @@ app.post('/users',(req, res)=>{
 
 // tasks
 
-app.get('/tasks', (req, res)=>{
-    Task.find({})
-        .then((value)=>{return res.send(
-            {
-                msg: 'Success!',
-                value
-            }
-        )})
-        .catch((error)=>{
-            res.status(400).send(
-            {
-                msg: 'Unable to retrieve data',
-                error
-            }
-        )})
+app.get('/tasks', async (req, res)=>{
+    try{
+        const data = await Task.find({})
+        return res.send({msg:'Success', data})
+    }
+    catch(e){
+        return res.status(500).send({msg:dataError, e})
+    }
 })
 
-app.get('/tasks/state/:completed', (req, res)=>{
+app.get('/tasks/state/:completed', async (req, res)=>{
     const state = req.params.completed;
 
     Task.find({completed: state})
         .then((value)=>{
-            if(!value){
-                return res.status(404).send({msg: 'Not found'})
+            if(value.length === 0){
+                return res.status(404).send({msg:'Not found'})
             }
             return res.send({msg:'Success', value})
         })
-        .catch((error)=>{
-            return res.status(400).send({msg: 'Error', error});
-        })
+        .catch((e)=>{res.status(500).send({msg:dataError, e})})
 })
 
 app.get('/tasks/id/:id', (req, res)=>{
@@ -132,18 +104,9 @@ app.post('/tasks',(req, res)=>{
     const data = new Task(req.body);
 
     data.save()
-        .then((data)=>{return res.send(
-            {
-                msg: 'Success!',
-                data
-            }
-        )})
+        .then((data)=>{return res.send({msg: 'Success!',data})})
         .catch((error)=>{
-            res.status(400).send(
-            {
-                msg: 'Unable to create task',
-                error
-            }
+            return res.status(400).send({msg: 'Unable to create task',error}
         )})
 })
 
