@@ -26,9 +26,7 @@ app.get('/users', (req, res)=>{
 app.get('/users/id/:id', (req, res)=>{
     const _id = req.params.id;
 
-    const data = User.findById(_id)
-    
-    data
+    User.findById(_id)
         .then((value)=>{
             if(!value){
                 return res.status(404).send('Data not found')
@@ -43,9 +41,7 @@ app.get('/users/id/:id', (req, res)=>{
 app.get('/users/name/:name', (req,res)=>{
     const name = req.params.name
 
-    const data = User.findOne({name})
-
-    data
+    User.findOne({name})
         .then((value)=>{
             if(!value){
                 return res.status(404).send({msg: 'Not found'})
@@ -104,9 +100,7 @@ app.get('/tasks', (req, res)=>{
 app.get('/tasks/state/:completed', (req, res)=>{
     const state = req.params.completed;
 
-    const data = Task.find({completed: state})
-
-    data
+    Task.find({completed: state})
         .then((value)=>{
             if(!value){
                 return res.status(404).send({msg: 'Not found'})
@@ -121,9 +115,7 @@ app.get('/tasks/state/:completed', (req, res)=>{
 app.get('/tasks/id/:id', (req, res)=>{
     const _id = req.params.id;
 
-    const data = Task.findById(_id)
-
-    data
+    Task.findById(_id)
         .then((value)=>{
             if(!value){
                 return res.status(404).send({msg: 'Not found'});
