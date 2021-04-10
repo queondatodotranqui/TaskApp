@@ -13,10 +13,11 @@ const dataError = 'Unable to retrieve data'
 // users
 
 app.get('/users', async (req, res)=>{
+
     try{
         const data = await User.find({})
         return res.send({msg:'Success', data})
-    }
+    } 
     catch(e){
         return res.status(500).send({msg:dataError, e})
     }
@@ -28,33 +29,38 @@ app.get('/users/id/:id', async (req, res)=>{
     try{
         const data = await User.findById({_id});
         return res.send({msg:'Success', data});
-    }
+    } 
     catch(e){
         return res.status(500).send({msg:dataError, e});
     }
 })
 
-app.get('/users/name/:name', (req,res)=>{
+app.get('/users/name/:name', async (req,res)=>{
     const name = req.params.name;
 
-    User.find({name})
-        .then((value)=>{
-            if(value.length === 0){
-                return res.status(404).send({msg:'Not found'})
-            }
-            return res.send({msg:'Success', value})
-        })
-        .catch((e)=>{return res.status(500).send({msg:dataError, e})})
+    try{
+        const users = await User.find({name})
+
+        if(users.length === 0){
+            return res.status(404).send({msg:'Not found'})
+        }
+        return res.send({msg:'Success', users})
+    } 
+    catch(e){
+        return res.status(500).send({msg:dataError, e})
+    }
 })
 
-app.post('/users',(req, res)=>{
+app.post('/users', async (req, res)=>{
     const data = new User(req.body);
 
-    data.save()
-        .then((data)=>{return res.send({msg: 'Success',data})})
-        .catch((error)=>{
-            return res.status(400).send({msg: 'Unable to create user',error}
-        )})
+    try{
+        await data.save()
+        return res.status(201).send({msg:'User created', data})
+    } 
+    catch(e){
+        return res.status(400).send({msg:'Error', e})
+    }
 })
 
 
@@ -62,6 +68,7 @@ app.post('/users',(req, res)=>{
 // tasks
 
 app.get('/tasks', async (req, res)=>{
+
     try{
         const data = await Task.find({})
         return res.send({msg:'Success', data})
@@ -72,42 +79,50 @@ app.get('/tasks', async (req, res)=>{
 })
 
 app.get('/tasks/state/:completed', async (req, res)=>{
+
     const state = req.params.completed;
 
-    Task.find({completed: state})
-        .then((value)=>{
-            if(value.length === 0){
-                return res.status(404).send({msg:'Not found'})
-            }
-            return res.send({msg:'Success', value})
-        })
-        .catch((e)=>{res.status(500).send({msg:dataError, e})})
+    try{
+        const data = await Task.find({completed: state})
+
+        if(data.length === 0){
+            return res.status(404).send({msg:'Not found'})
+        };
+        return res.send({msg:'Success', data})
+    } 
+    catch(e){
+        return res.status(500).send({msg:dataError, e})
+    }
 })
 
-app.get('/tasks/id/:id', (req, res)=>{
+app.get('/tasks/id/:id', async (req, res)=>{
+
     const _id = req.params.id;
 
-    Task.findById(_id)
-        .then((value)=>{
-            if(!value){
-                return res.status(404).send({msg: 'Not found'});
-            }
-            return res.send({msg: 'Success', value})
-        })
-        .catch((error)=>{
-            return res.status(400).send({msg: 'Unable to retrieve data'})
-        })
+    try{
+        const data = await Task.findById(_id);
+
+        if(data === null){
+            return res.status(404).send({msg:'Not found'})
+        };
+        return res.send({msg:'Success', data})
+    } 
+    catch(e){
+        return res.status(500).send({msg:dataError, e})
+    }
 }) 
 
 
-app.post('/tasks',(req, res)=>{
+app.post('/tasks', async (req, res)=>{
     const data = new Task(req.body);
 
-    data.save()
-        .then((data)=>{return res.send({msg: 'Success!',data})})
-        .catch((error)=>{
-            return res.status(400).send({msg: 'Unable to create task',error}
-        )})
+    try{
+        await data.save();
+        return res.status(201).send({msg:'Task created', data})
+    }
+    catch(e){
+        return res.status(400).send({msg:'Cannot create task', e})
+    }
 })
 
 app.listen(port, ()=>{
