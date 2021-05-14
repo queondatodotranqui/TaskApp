@@ -1,18 +1,77 @@
 const express = require('express');
 const router = new express.Router();
 const User = require('../models/user');
+const auth = require('../middleware/auth');
 
 const dataError = 'Unable to retrieve data'
 
-router.get('/users', async (req, res)=>{
+// post
+router.post('/users/login', async (req, res)=>{
 
     try{
-        const data = await User.find({})
-        return res.send({msg:'Success', data})
+        const user = await User.findByCredentials(req.body.email, req.body.password);
+        const token = await user.generateToken();
+        
+        if(!user){
+            return res.status(400).send({msg:'Unable to login'});
+        }
+        return res.send({msg:'Success', user, token});
+    }
+    catch(e){
+        res.status(500).send({msg:'Error', e});
+    }
+})
+
+router.post('/users', async (req, res)=>{
+    const data = new User(req.body);
+
+    try{
+        await data.save()
+        const token = await data.generateToken();
+        return res.status(201).send({msg:'User created', data, token})
     } 
     catch(e){
-        return res.status(500).send({msg:dataError, e})
+        return res.status(400).send({msg:'Error', e})
     }
+})
+
+router.post('/users/logout', auth, async (req, res)=>{
+
+    try{
+        const user = req.user;
+
+        user.tokens = user.tokens.filter((token)=>{
+            return token.token !== req.token;
+        })
+
+        await user.save();
+
+        return res.send({msg:'Logged out!'});
+    }
+    catch(e){
+        return res.status(500).send({msg:'Error'});
+    }
+})
+
+router.post('/users/logoutAll', auth, async(req, res)=>{
+
+    try{
+        const user = req.user;
+        user.tokens = [];
+
+        await user.save();
+        return res.status(200).send({msg:'Logged out all sessions'});
+    }
+    catch(e){
+        return res.status(500).send({msg:'Error'});
+    }
+})
+
+
+// get
+router.get('/users/me', auth,  async (req, res)=>{
+
+    res.send({msg:'Success', data: req.user});
 })
 
 router.get('/users/id/:id', async (req, res)=>{
@@ -20,6 +79,10 @@ router.get('/users/id/:id', async (req, res)=>{
 
     try{
         const data = await User.findById({_id});
+
+        if(data === null){
+            return res.status(404).send({msg:'Not found'});
+        }
         return res.send({msg:'Success', data});
     } 
     catch(e){
@@ -44,19 +107,7 @@ router.get('/users/name/:name', async (req,res)=>{
 })
 
 
-router.post('/users', async (req, res)=>{
-    const data = new User(req.body);
-
-    try{
-        await data.save()
-        return res.status(201).send({msg:'User created', data})
-    } 
-    catch(e){
-        return res.status(400).send({msg:'Error', e})
-    }
-})
-
-
+// patch
 router.patch('/users/:id', async (req, res)=>{
 
     const updates = Object.keys(req.body);
@@ -68,11 +119,12 @@ router.patch('/users/:id', async (req, res)=>{
     }
 
     try{
-        const user = await User.findByIdAndUpdate(req.params.id,req.body,{
-            new: true,
-            runValidators: true
-        })
+        const user = await User.findById(req.params.id);
+
+        updates.forEach((item)=> user[item] = req.body[item])
         
+        await user.save();
+
         if(!user){
             return res.status(404).send({msg:'Not found'})
         }
@@ -83,6 +135,8 @@ router.patch('/users/:id', async (req, res)=>{
     }
 })
 
+
+// delete
 router.delete('/users/:id', async (req, res)=>{
 
     try{

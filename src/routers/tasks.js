@@ -1,4 +1,5 @@
 const express = require('express');
+const { findById, update } = require('../models/task');
 const router = new express.Router();
 const Task = require('../models/task');
 
@@ -73,7 +74,11 @@ router.patch('/tasks/:id', async (req, res)=>{
     }
 
     try{
-        const data = await Task.findByIdAndUpdate(req.params.id, req.body, {new: true, runValidators: true});
+        const data = await Task.findById(req.params.id);
+
+        updates.forEach((item)=> data[item] = req.body[item]);
+
+        await data.save();
 
         if(!data){
             return res.status(404).send({msg:'Not found'});
