@@ -1,15 +1,15 @@
 const express = require('express');
-const { findById, update } = require('../models/task');
 const router = new express.Router();
 const Task = require('../models/task');
+const auth = require('../middleware/auth');
 
 const dataError = 'Unable to retrieve data';
 
-router.get('/tasks', async (req, res)=>{
+router.get('/tasks', auth, async (req, res)=>{
 
     try{
-        const data = await Task.find({})
-        return res.send({msg:'Success', data})
+        const data = await Task.find({owner: req.user._id});
+        return res.send({msg:`Showing tasks for ${req.user.name}`, data});
     }
     catch(e){
         return res.status(500).send({msg:dataError, e})
@@ -33,25 +33,28 @@ router.get('/tasks/state/:completed', async (req, res)=>{
     }
 })
 
-router.get('/tasks/id/:id', async (req, res)=>{
+router.get('/tasks/id/:id', auth, async (req, res)=>{
 
     const _id = req.params.id;
 
     try{
-        const data = await Task.findById(_id);
+        const task = await Task.findOne({_id, owner: req.user._id});
 
-        if(data === null){
+        if(task === null){
             return res.status(404).send({msg:'Not found'})
         };
-        return res.send({msg:'Success', data})
+        return res.send({msg:'Success', task})
     } 
     catch(e){
         return res.status(500).send({msg:dataError, e})
     }
 }) 
 
-router.post('/tasks', async (req, res)=>{
-    const data = new Task(req.body);
+router.post('/tasks', auth, async (req, res)=>{
+    const data = new Task({
+        ...req.body,
+        owner:req.user._id
+    });
 
     try{
         await data.save();
@@ -63,7 +66,7 @@ router.post('/tasks', async (req, res)=>{
 })
 
 
-router.patch('/tasks/:id', async (req, res)=>{
+router.patch('/tasks/:id', auth, async (req, res)=>{
 
     const updates = Object.keys(req.body);
     const allowedUpdates = ['description', 'completed'];
@@ -74,31 +77,31 @@ router.patch('/tasks/:id', async (req, res)=>{
     }
 
     try{
-        const data = await Task.findById(req.params.id);
-
-        updates.forEach((item)=> data[item] = req.body[item]);
-
-        await data.save();
+        const data = await Task.findOne({_id:req.params.id, owner:req.user._id});
 
         if(!data){
             return res.status(404).send({msg:'Not found'});
         }
-        return res.send({msg:'Success', data});
+
+        updates.forEach((item)=> data[item] = req.body[item]);
+
+        await data.save();
+        return res.send({msg:'Task updated', data});
     }
     catch(e){
         return res.status(400).send({msg:'Error', e});
     }
 })
 
-router.delete('/tasks/:id', async (req, res)=>{
+router.delete('/tasks/:id', auth, async (req, res)=>{
 
     try{
-        const data = await Task.findByIdAndDelete(req.params.id);
+        const data = await Task.findOneAndDelete({_id:req.params.id, owner:req.user._id});
 
         if(!data){
             return res.status(404).send({msg:'Not found'});
         }
-        return res.send({msg:'Success', data})
+        return res.send({msg:'Task deleted', data})
     }
     catch(e){
         return res.status(500).send({msg:'Error', e})

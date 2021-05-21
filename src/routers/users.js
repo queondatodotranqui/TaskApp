@@ -74,22 +74,6 @@ router.get('/users/me', auth,  async (req, res)=>{
     res.send({msg:'Success', data: req.user});
 })
 
-router.get('/users/id/:id', async (req, res)=>{
-    const _id = req.params.id;
-
-    try{
-        const data = await User.findById({_id});
-
-        if(data === null){
-            return res.status(404).send({msg:'Not found'});
-        }
-        return res.send({msg:'Success', data});
-    } 
-    catch(e){
-        return res.status(500).send({msg:dataError, e});
-    }
-})
-
 router.get('/users/name/:name', async (req,res)=>{
     const name = req.params.name;
 
@@ -108,7 +92,7 @@ router.get('/users/name/:name', async (req,res)=>{
 
 
 // patch
-router.patch('/users/:id', async (req, res)=>{
+router.patch('/users/me', auth,  async (req, res)=>{
 
     const updates = Object.keys(req.body);
     const allowedUpdates = ['name', 'age', 'password', 'email'];
@@ -119,16 +103,10 @@ router.patch('/users/:id', async (req, res)=>{
     }
 
     try{
-        const user = await User.findById(req.params.id);
-
-        updates.forEach((item)=> user[item] = req.body[item])
+        updates.forEach((item)=> req.user[item] = req.body[item])
         
-        await user.save();
-
-        if(!user){
-            return res.status(404).send({msg:'Not found'})
-        }
-        return res.send({msg:'User updated', user})
+        await req.user.save();
+        return res.send({msg:'User updated', user: req.user});
     }
     catch(e){
         return res.status(400).send({msg:'Error', e})
@@ -137,14 +115,12 @@ router.patch('/users/:id', async (req, res)=>{
 
 
 // delete
-router.delete('/users/:id', async (req, res)=>{
+router.delete('/users/me', auth, async (req, res)=>{
 
     try{
-        const data = await User.findByIdAndDelete(req.params.id)
-        if(!data){
-            return res.status(404).send({msg:'Not found'})
-        }
-        return res.send({msg:'User deleted', data})
+        await req.user.remove();
+        
+        return res.send({msg:'User deleted', user: req.user});
     }
     catch(e){
         return res.status(500).send({msg:'Error', e});
