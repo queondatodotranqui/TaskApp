@@ -7,29 +7,33 @@ const dataError = 'Unable to retrieve data';
 
 router.get('/tasks', auth, async (req, res)=>{
 
+    const match = {}
+    const sort = {}
+
+    if(req.query.completed){
+        match.completed = req.query.completed;
+    }
+
+    if(req.query.sortBy){
+        const parts = req.query.sortBy.split('_');
+        sort[parts[0]] = parts[1] === 'desc' ? -1 : 1;
+    }
+
     try{
-        const data = await Task.find({owner: req.user._id});
-        return res.send({msg:`Showing tasks for ${req.user.name}`, data});
+        await req.user.populate({
+            path: 'tasks',
+            match,
+            options:{
+                limit: parseInt(req.query.limit),
+                skip: parseInt(req.query.skip),
+                sort
+            }
+        }).execPopulate()
+    
+        res.send({msg:`Showing tasks from ${req.user.name}`, tasks:req.user.tasks})
     }
     catch(e){
-        return res.status(500).send({msg:dataError, e})
-    }
-})
-
-router.get('/tasks/state/:completed', async (req, res)=>{
-
-    const state = req.params.completed;
-
-    try{
-        const data = await Task.find({completed: state})
-
-        if(data.length === 0){
-            return res.status(404).send({msg:'Not found'})
-        };
-        return res.send({msg:'Success', data})
-    } 
-    catch(e){
-        return res.status(500).send({msg:dataError, e})
+        return res.status(500).send({msg:'Error', e:dataError});
     }
 })
 
