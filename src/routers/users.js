@@ -2,6 +2,20 @@ const express = require('express');
 const router = new express.Router();
 const User = require('../models/user');
 const auth = require('../middleware/auth');
+const multer = require('multer');
+
+const upload = multer({
+    limits:{
+        fileSize: 1000000
+    },
+    fileFilter(req, file, cb){
+        if(!file.originalname.match(/\.(jpg|jpeg|png)$/)){
+            return cb(new Error('pls upload an image of valid format'));
+        }
+ 
+        cb(undefined, true);
+    }
+})
 
 const dataError = 'Unable to retrieve data'
 
@@ -67,6 +81,13 @@ router.post('/users/logoutAll', auth, async(req, res)=>{
     }
 })
 
+router.post('/users/me/avatar', auth, upload.single('avatar'), async (req, res)=>{
+    req.user.avatar = req.file.buffer;
+    await req.user.save();
+    res.send({msg:'Image saved'});
+}, (error , req, res, next)=>{
+    res.status(400).send({error: error.message});
+})
 
 // get
 router.get('/users/me', auth,  async (req, res)=>{
@@ -90,6 +111,21 @@ router.get('/users/name/:name', async (req,res)=>{
     }
 })
 
+router.get('/users/:id/avatar', async(req, res)=>{
+    
+    try{
+        const user = await User.findById(req.params.id);    
+
+        if(!user || !user.avatar){
+            return res.status(404).send({msg:'Not found'});
+        }
+        res.set('Content-Type', 'image/jpg');
+        return res.send(user.avatar);
+    }
+    catch(e){
+        return res.status(400).send({msg:'Error', e});
+    }
+})
 
 // patch
 router.patch('/users/me', auth,  async (req, res)=>{
@@ -115,6 +151,21 @@ router.patch('/users/me', auth,  async (req, res)=>{
 
 
 // delete
+router.delete('/users/me/avatar', auth, async (req, res)=>{
+
+    try{
+        if(!req.user.avatar){
+            return res.status(404).send({msg:'Image not found'});
+        }
+        req.user.avatar = undefined;
+        await req.user.save();
+        return res.send({msg:'Avatar image deleted'});
+    }
+    catch(e){
+        return res.status(500).send({msg:'Error', e});
+    }
+})
+
 router.delete('/users/me', auth, async (req, res)=>{
 
     try{
